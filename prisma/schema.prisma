@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  DEALER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CUSTOMER)
+  dealerId  String?
+  dealer    Dealer?  @relation("DealerUser", fields: [dealerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dealerProfile   Dealer?   @relation("DealerProfile")
+  customerProfile Customer? @relation("CustomerProfile")
+}
+
+model Dealer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  userId    String   @unique
+  user      User     @relation("DealerProfile", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  customers   Customer[]
+  products    Product[]
+  orders      Order[]
+  accounts    Account[]
+  dealerUsers User[]    @relation("DealerUser")
+}
+
+model Customer {
+  id       String  @id @default(cuid())
+  name     String
+  shopName String
+  address  String?
+  phone    String?
+  dealerId String
+  dealer   Dealer  @relation(fields: [dealerId], references: [id])
+  userId   String? @unique
+  user     User?   @relation("CustomerProfile", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  orders        Order[]
+  productPrices ProductPrice[]
+  payments      Payment[]
+  account       Account?
+}
+
+model Product {
+  id       String  @id @default(cuid())
+  name     String
+  barcode  String?
+  imageUrl String?
+  dealerId String
+  dealer   Dealer  @relation(fields: [dealerId], references: [id])
+  createdAt DateTime @default(now())
+
+  prices         ProductPrice[]
+  stockMovements StockMovement[]
+  orderItems     OrderItem[]
+}
+
+model ProductPrice {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  costPrice  Float
+  salePrice  Float
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  product   Product           @relation(fields: [productId], references: [id])
+  quantity  Int
+  type      StockMovementType
+  note      String?
+  createdAt DateTime          @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  dealerId    String
+  dealer      Dealer      @relation(fields: [dealerId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Float       @default(0)
+  createdAt   DateTime    @default(now())
+
+  items   OrderItem[]
+  invoice Invoice?
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id])
+  invoiceNumber String   @unique
+  totalAmount   Float
+  pdfUrl        String?
+  createdAt     DateTime @default(now())
+
+  payments Payment[]
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice       @relation(fields: [invoiceId], references: [id])
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  amount     Float
+  method     PaymentMethod
+  note       String?
+  createdAt  DateTime      @default(now())
+}
+
+model Account {
+  id         String   @id @default(cuid())
+  customerId String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id])
+  dealerId   String
+  dealer     Dealer   @relation(fields: [dealerId], references: [id])
+  balance    Float    @default(0)
+  updatedAt  DateTime @updatedAt
+}
