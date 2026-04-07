@@ -3,9 +3,7 @@ const nextConfig = {
   images: {
     domains: ['res.cloudinary.com'],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-  },
+  serverExternalPackages: ['@prisma/client'],
 }
 
 module.exports = nextConfig

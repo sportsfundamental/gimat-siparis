@@ -3,15 +3,16 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'DEALER') {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
+  const { id } = await params
   const dealerId = session.user.dealerId
   const order = await prisma.order.findFirst({
-    where: { id: params.id, dealerId },
+    where: { id, dealerId },
     include: {
       customer: true,
       items: {

@@ -4,16 +4,17 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { PaymentMethod } from '@prisma/client'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'DEALER') {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
+  const { id } = await params
   const dealerId = session.user.dealerId
 
   const invoice = await prisma.invoice.findFirst({
-    where: { id: params.id, order: { dealerId } },
+    where: { id, order: { dealerId } },
     include: { order: { select: { customerId: true } } },
   })
 
